@@ -1,13 +1,14 @@
 import time
 
-from job_queue.redis_client import get_job
+from job_queue.azure_queue_client import complete_job, get_job
 from services.video_service import process_video_job
 
 print("Worker started...")
 
 while True:
+    message = None
     try:
-        job = get_job()
+        job, message = get_job()
         if not job:
             continue
 
@@ -18,3 +19,5 @@ while True:
     except Exception as e:
         print(f"Worker error: {e}")
         time.sleep(2)
+    finally:
+        complete_job(message)

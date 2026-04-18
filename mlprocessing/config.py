@@ -1,8 +1,5 @@
 import os
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
-QUEUE_NAME = os.getenv("QUEUE_NAME", "video_processing_queue")
-
 DATABASE_URL = os.getenv("DATABASE_URL")
 DB_HOST = os.getenv("DB_HOST", "postgres")
 DB_NAME = os.getenv("DB_NAME", "video_intel")
