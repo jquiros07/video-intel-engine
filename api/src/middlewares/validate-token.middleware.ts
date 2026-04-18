@@ -1,47 +1,46 @@
-import { Request, Response, NextFunction, response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { requireEnv } from '../utilities';
+import { hashToken, requireEnv } from '../utilities';
 import { prisma } from '../db';
 
-export const validateToken = (req: Request, res: Response, next: NextFunction): Response | void => {
+export const validateToken = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
     try {
-        const authHeader = req.headers['authorization'];
+        const authHeader = req.headers.authorization;
 
-        if (authHeader === undefined || authHeader === null) {
-            return response.status(403).json({ message: 'Forbidden', data: null });
+        if (!authHeader?.startsWith('Bearer ')) {
+            return res.status(403).json({ message: 'Forbidden', data: null });
         }
 
-        const token = authHeader && authHeader.split(' ')[1];
+        const token = authHeader.split(' ')[1];
 
-        if (token === null || token === '') {
-            return response.status(403).json({ message: 'Forbidden', data: null });
+        if (!token) {
+            return res.status(403).json({ message: 'Forbidden', data: null });
         }
 
         const key = requireEnv('JWT_SECRET_KEY');
         const algorithm = requireEnv('JWT_ALGORITHM') as jwt.Algorithm;
-        const options = { algorithms: [algorithm] } as jwt.VerifyOptions;
+        jwt.verify(token, key, { algorithms: [algorithm] });
 
-        jwt.verify(token, key, options, async (error) => {
-            if (error) {
-                return response.status(403).json({ 'message': 'Forbidden', 'data': null });
-            } else {
-                const existingToken = await prisma.access.findUnique({
-                    where: { token: token }
-                });
-
-                if (!existingToken) {
-                    return res.status(403).json({ message: 'Forbidden: Invalid token', data: null });
-                }
-
-                if (existingToken.expiresAt < new Date()) {
-                    return res.status(403).json({ message: 'Forbidden: Token expired', data: null });
-                }
-
-                next();
-            }
+        const existingToken = await prisma.access.findUnique({
+            where: { token: hashToken(token) }
         });
 
+        if (!existingToken) {
+            return res.status(403).json({ message: 'Forbidden: Invalid token', data: null });
+        }
+
+        if (existingToken.expiresAt < new Date()) {
+            return res.status(403).json({ message: 'Forbidden: Token expired', data: null });
+        }
+
+        next();
+
     } catch (error) {
-        return response.status(403).json({ message: 'Forbidden', data: error });
+        if (error instanceof Error && ['JsonWebTokenError', 'TokenExpiredError', 'NotBeforeError'].includes(error.name)) {
+            return res.status(403).json({ message: 'Forbidden', data: null });
+        }
+
+        console.error('Token validation failed', error);
+        return res.status(500).json({ message: 'Internal server error', data: null });
     }
 };

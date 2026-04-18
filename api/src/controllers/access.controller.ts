@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { requireEnv } from '../utilities';
+import { hashToken, requireEnv } from '../utilities';
 import jwt from 'jsonwebtoken';
 import { RequestAccess } from '../types/RequestAccess';
 import Validator from 'validatorjs';
@@ -27,7 +27,7 @@ export const requestAccessToken = async (req: Request, res: Response): Promise<R
 
         await prisma.access.create({
             data: {
-                token: token,
+                token: hashToken(token),
                 userId: body.email,
                 expiresAt: expiresAt
             }
@@ -35,7 +35,8 @@ export const requestAccessToken = async (req: Request, res: Response): Promise<R
 
         return res.status(200).json({ message: 'Request granted', data: { token } });
     } catch (error) {
-        return res.status(500).json({ message: 'Error during login', data: error });
+        console.error('Error during access token request', error);
+        return res.status(500).json({ message: 'Internal server error', data: null });
     }
 };
 

@@ -41,8 +41,10 @@ services:
       context: ./mlprocessing
     container_name: video-intel-processor
     environment:
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/video_intel
       - REDIS_URL=redis://redis:6379
     depends_on:
+      - postgres
       - redis
 
 volumes:

@@ -32,6 +32,7 @@ export const processVideo = async (req: Request, res: Response): Promise<Respons
             data: { jobId: job.id, status: job.status }
         });
     } catch (error) {
-        return res.status(500).json({ message: 'Error queuing video for processing', data: error });
+        console.error('Error queuing video for processing', error);
+        return res.status(500).json({ message: 'Internal server error', data: null });
     }
 };
