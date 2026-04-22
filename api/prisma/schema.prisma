@@ -24,9 +24,12 @@ model Access {
 
 model VideoProcessing {
   id         String   @id @default(uuid())
+  email      String
   videoUrl   String
   status     String   @default("PENDING")
   resultData Json?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([email])
 }

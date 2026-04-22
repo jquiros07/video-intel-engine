@@ -3,7 +3,7 @@ import { parseVideoUpload } from "../middlewares/parse-video-upload.middleware";
 import { validateToken } from "../middlewares/validate-token.middleware";
 import { rateLimit } from "express-rate-limit";
 import { requestAccessToken } from "../controllers/access.controller";
-import { processVideo } from "../controllers/video-process.controller";
+import { processVideo, sendProcessResultsEmail } from "../controllers/video-process.controller";
 
 const requestAccessRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 5 minutes
@@ -15,5 +15,6 @@ const router = Router();
 
 router.post("/request-access-token", requestAccessRateLimiter, requestAccessToken);
 router.post("/process-video", validateToken, parseVideoUpload, processVideo);
+router.post("/send-email", validateToken, sendProcessResultsEmail);
 
 export default router;

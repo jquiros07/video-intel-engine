@@ -11,6 +11,7 @@ from db.video_processing import (
     save_result,
     update_status,
 )
+from enums import VideoProcessingStatus
 
 AZURE_STORAGE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 AZURE_BLOB_CONTAINER_NAME = os.getenv("AZURE_BLOB_CONTAINER_NAME", "videos")
@@ -29,7 +30,7 @@ def process_video_job(data):
 
     local_video_path = None
     try:
-        update_status(video_id, "PROCESSING")
+        update_status(video_id, VideoProcessingStatus.PROCESSING)
 
         local_video_path, video_path = resolve_video_source(blob_name, video_source)
 

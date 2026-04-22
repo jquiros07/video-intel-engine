@@ -3,6 +3,7 @@ import json
 import psycopg2
 
 from config import DATABASE_URL, DB_HOST, DB_NAME, DB_PASS, DB_USER
+from enums import VideoProcessingStatus
 
 conn = None
 
@@ -50,7 +51,7 @@ def save_result(video_id, result):
             WHERE id = %s
             """,
             (
-                "COMPLETED",
+                VideoProcessingStatus.COMPLETED,
                 json.dumps(result),
                 video_id,
             ),
@@ -68,7 +69,7 @@ def mark_failed(video_id, error):
             WHERE id = %s
             """,
             (
-                "FAILED",
+                VideoProcessingStatus.FAILED,
                 json.dumps({"error": str(error)}),
                 video_id,
             ),
