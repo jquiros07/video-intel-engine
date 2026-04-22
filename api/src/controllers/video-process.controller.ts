@@ -25,7 +25,7 @@ export const processVideo = async (req: Request, res: Response): Promise<Respons
         if (!videoUrl || typeof videoUrl !== 'string') {
             return res.status(422).json({
                 message: 'Validation failed',
-                data: { video: ['Send a raw video upload or provide videoUrl'] }
+                data: { video: ['Send multipart/form-data with a file field named "file" or provide videoUrl'] }
             });
         }
 

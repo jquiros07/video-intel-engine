@@ -28,18 +28,18 @@ export type StoredVideoUpload = {
 };
 
 export const validateVideoUpload = (req: Request): UploadValidationError | null => {
-    if (!Buffer.isBuffer(req.body)) {
+    if (!req.file) {
         return null;
     }
 
-    if (req.body.length === 0) {
+    if (!Buffer.isBuffer(req.file.buffer) || req.file.size === 0) {
         return {
             status: 422,
             data: { video: ['Video file is empty'] }
         };
     }
 
-    const mimeType = normalizeMimeType(req.header('content-type'));
+    const mimeType = normalizeMimeType(req.file.mimetype);
 
     if (!mimeType || !ALLOWED_VIDEO_MIME_TYPES.has(mimeType)) {
         return {
@@ -48,7 +48,7 @@ export const validateVideoUpload = (req: Request): UploadValidationError | null 
         };
     }
 
-    if (req.body.length > getUploadLimitInBytes()) {
+    if (req.file.size > getUploadLimitInBytes()) {
         return {
             status: 413,
             data: { video: [`Video file is too large. Max size is ${process.env.VIDEO_UPLOAD_LIMIT || DEFAULT_VIDEO_UPLOAD_LIMIT}`] }
@@ -59,28 +59,25 @@ export const validateVideoUpload = (req: Request): UploadValidationError | null 
 };
 
 export const storeUploadedVideo = async (req: Request): Promise<StoredVideoUpload | null> => {
-    if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+    if (!req.file || !Buffer.isBuffer(req.file.buffer) || req.file.size === 0) {
         return null;
     }
 
-    const mimeType = normalizeMimeType(req.header('content-type'));
-    const requestedFileName = getRequestedFileName(req, mimeType);
+    const mimeType = normalizeMimeType(req.file.mimetype);
+    const requestedFileName = getRequestedFileName(req.file.originalname, mimeType);
     const safeFileName = sanitizeUploadFileName(requestedFileName);
     const extension = getFileExtension(safeFileName) || getExtensionFromMimeType(mimeType);
     const storedFileName = `${Date.now()}-${randomUUID()}${extension}`;
 
     return uploadVideoBuffer(
         storedFileName,
-        req.body,
+        req.file.buffer,
         mimeType || DEFAULT_VIDEO_UPLOAD_CONTENT_TYPE
     );
 };
 
-const getRequestedFileName = (req: Request, mimeType?: string): string => {
-    const headerFileName = req.header('x-file-name');
-    const queryFileName = typeof req.query.fileName === 'string' ? req.query.fileName : undefined;
-
-    return headerFileName || queryFileName || `${DEFAULT_VIDEO_FILE_NAME}${getExtensionFromMimeType(mimeType)}`;
+const getRequestedFileName = (originalFileName?: string, mimeType?: string): string => {
+    return originalFileName?.trim() || `${DEFAULT_VIDEO_FILE_NAME}${getExtensionFromMimeType(mimeType)}`;
 };
 
 const getExtensionFromMimeType = (mimeType?: string): string => {
@@ -105,7 +102,11 @@ const normalizeMimeType = (mimeType?: string): string | undefined => {
 };
 
 const getUploadLimitInBytes = (): number => {
-    const rawLimit = (process.env.VIDEO_UPLOAD_LIMIT || DEFAULT_VIDEO_UPLOAD_LIMIT).trim().toLowerCase();
+    return getSizeLimitInBytes(process.env.VIDEO_UPLOAD_LIMIT || DEFAULT_VIDEO_UPLOAD_LIMIT);
+};
+
+function getSizeLimitInBytes(rawLimitValue: string): number {
+    const rawLimit = rawLimitValue.trim().toLowerCase();
     const match = rawLimit.match(/^(\d+)(b|kb|mb|gb)?$/);
 
     if (!match) {
@@ -125,4 +126,4 @@ const getUploadLimitInBytes = (): number => {
         default:
             return size;
     }
-};
+}

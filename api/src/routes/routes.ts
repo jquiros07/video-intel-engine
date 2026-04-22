@@ -1,4 +1,5 @@
-import express, { Router } from "express";
+import { Router } from "express";
+import { parseVideoUpload } from "../middlewares/parse-video-upload.middleware";
 import { validateToken } from "../middlewares/validate-token.middleware";
 import { rateLimit } from "express-rate-limit";
 import { requestAccessToken } from "../controllers/access.controller";
@@ -11,12 +12,8 @@ const requestAccessRateLimiter = rateLimit({
 });
 
 const router = Router();
-const videoUploadParser = express.raw({
-    type: ['video/*', 'application/octet-stream'],
-    limit: process.env.VIDEO_UPLOAD_PARSER_LIMIT || '1gb'
-});
 
 router.post("/request-access-token", requestAccessRateLimiter, requestAccessToken);
-router.post("/process-video", validateToken, videoUploadParser, processVideo);
+router.post("/process-video", validateToken, parseVideoUpload, processVideo);
 
 export default router;
