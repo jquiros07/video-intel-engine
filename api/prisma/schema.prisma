@@ -15,9 +15,11 @@ datasource db {
 model Access {
   id        String   @id @default(uuid())
   token     String   @unique
-  userId    String
+  email     String
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  @@index([email])
 }
 
 model VideoProcessing {

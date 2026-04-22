@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { hashToken, requireEnv } from '../utilities';
+import { hashToken, requireEnv } from '../helpers/utilities';
 import { prisma } from '../db';
 
 export const validateToken = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
@@ -19,28 +19,26 @@ export const validateToken = async (req: Request, res: Response, next: NextFunct
 
         const key = requireEnv('JWT_SECRET_KEY');
         const algorithm = requireEnv('JWT_ALGORITHM') as jwt.Algorithm;
-        jwt.verify(token, key, { algorithms: [algorithm] });
+        jwt.verify(token, key, { algorithms: [algorithm] }, async (err) => {
+            if (err) {
+                return res.status(403).json({ message: 'Forbidden', data: null });
+            } else {
+                const existingToken = await prisma.access.findUnique({
+                    where: { token: hashToken(token) }
+                });
 
-        const existingToken = await prisma.access.findUnique({
-            where: { token: hashToken(token) }
+                if (!existingToken) {
+                    return res.status(403).json({ message: 'Forbidden: Invalid token', data: null });
+                }
+
+                if (existingToken.expiresAt < new Date()) {
+                    return res.status(403).json({ message: 'Forbidden: Token expired', data: null });
+                }
+
+                next();
+            }
         });
-
-        if (!existingToken) {
-            return res.status(403).json({ message: 'Forbidden: Invalid token', data: null });
-        }
-
-        if (existingToken.expiresAt < new Date()) {
-            return res.status(403).json({ message: 'Forbidden: Token expired', data: null });
-        }
-
-        next();
-
     } catch (error) {
-        if (error instanceof Error && ['JsonWebTokenError', 'TokenExpiredError', 'NotBeforeError'].includes(error.name)) {
-            return res.status(403).json({ message: 'Forbidden', data: null });
-        }
-
-        console.error('Token validation failed', error);
-        return res.status(500).json({ message: 'Internal server error', data: null });
+        return res.status(403).json({ message: 'Forbidden', data: error });
     }
 };

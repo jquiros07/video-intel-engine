@@ -13,7 +13,7 @@ const requestAccessRateLimiter = rateLimit({
 const router = Router();
 const videoUploadParser = express.raw({
     type: ['video/*', 'application/octet-stream'],
-    limit: process.env.VIDEO_UPLOAD_LIMIT || '500mb'
+    limit: process.env.VIDEO_UPLOAD_PARSER_LIMIT || '1gb'
 });
 
 router.post("/request-access-token", requestAccessRateLimiter, requestAccessToken);

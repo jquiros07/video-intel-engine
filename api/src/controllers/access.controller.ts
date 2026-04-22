@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { hashToken, requireEnv } from '../utilities';
+import { hashToken, requireEnv } from '../helpers/utilities';
 import jwt from 'jsonwebtoken';
 import { RequestAccess } from '../types/RequestAccess';
 import Validator from 'validatorjs';
@@ -28,7 +28,7 @@ export const requestAccessToken = async (req: Request, res: Response): Promise<R
         await prisma.access.create({
             data: {
                 token: hashToken(token),
-                userId: body.email,
+                email: body.email,
                 expiresAt: expiresAt
             }
         });

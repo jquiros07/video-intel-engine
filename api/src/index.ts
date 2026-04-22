@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import dotenv from 'dotenv';
 import router from './routes/routes';
 import { rateLimit } from 'express-rate-limit';
@@ -20,12 +20,11 @@ app.use(generalRateLimiter);
 app.use('/api', router);
 
 try {
-  console.log("Connecting to the database...");
-  console.log("Database connected successfully.");
+  console.log('Starting API server...');
 
   app.listen(port, '0.0.0.0', () => {
     console.log(`Server is running on port ${port}`);
   });
 } catch (error) {
-  console.error("Server error", error);
+  console.error('Server error', error);
 }
