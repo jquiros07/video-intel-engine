@@ -38,6 +38,7 @@ services:
       - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
       - JWT_EXPIRATION=${JWT_EXPIRATION:-60}
       - VIDEO_UPLOAD_LIMIT=500mb
+      - SERVICE_SECRET=${SERVICE_SECRET:-localservicesecret}
     depends_on:
       - postgres
       - azurite
@@ -51,6 +52,9 @@ services:
       - AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;
       - AZURE_QUEUE_NAME=video-processing-queue
       - AZURE_BLOB_CONTAINER_NAME=videos
+      - WORKER_MODE=loop
+      - API_BASE_URL=http://api:8080/api
+      - SERVICE_SECRET=${SERVICE_SECRET:-localservicesecret}
     depends_on:
       - postgres
       - azurite

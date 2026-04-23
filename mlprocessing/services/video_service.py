@@ -12,6 +12,7 @@ from db.video_processing import (
     update_status,
 )
 from enums import VideoProcessingStatus
+from services.notification_service import notify_completion
 
 AZURE_STORAGE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 AZURE_BLOB_CONTAINER_NAME = os.getenv("AZURE_BLOB_CONTAINER_NAME", "videos")
@@ -39,8 +40,10 @@ def process_video_job(data):
         save_result(video_id, {
             "threat": result
         })
+        notify_completion(video_id)
     except Exception as error:
         mark_failed(video_id, error)
+        notify_completion(video_id)
         raise
     finally:
         cleanup_temporary_file(local_video_path)

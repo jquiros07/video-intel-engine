@@ -104,13 +104,29 @@ Build these images from the repo:
 - `api/Dockerfile`
 - `mlprocessing/Dockerfile`
 
-Push them to a container registry you control, such as:
+The `mlprocessing` image installs CPU-only PyTorch and bakes in `yolov8n.pt` at build time, so it does not need a GPU and does not download model weights at startup. Expect a ~2-3 GB final image (down from ~4-5 GB with the default CUDA PyTorch build).
 
-- Docker Hub
-- GitHub Container Registry
-- Azure Container Registry
+Push them to a container registry you control. For Azure deployments, **Azure Container Registry is recommended** — it integrates directly with Container Apps (no pull credentials to manage) and the Basic tier costs ~$5/month:
 
-If the goal is a cheap short-lived test, Docker Hub or GHCR can avoid adding Azure Container Registry cost.
+```bash
+az acr create --resource-group rg-video-intel-test --name acrvideointeltest --sku Basic
+az acr login --name acrvideointeltest
+
+docker build -t acrvideointeltest.azurecr.io/video-intel-api:latest ./api
+docker build -t acrvideointeltest.azurecr.io/video-intel-processor:latest ./mlprocessing
+
+docker push acrvideointeltest.azurecr.io/video-intel-api:latest
+docker push acrvideointeltest.azurecr.io/video-intel-processor:latest
+```
+
+When creating the Container Apps environment, grant it pull access to the registry:
+
+```bash
+az containerapp env create ... \
+  --registry-server acrvideointeltest.azurecr.io
+```
+
+If the goal is a cheap short-lived test with no ACR cost, Docker Hub or GHCR are valid alternatives.
 
 ## Environment Variables
 
@@ -287,19 +303,69 @@ This is the cleanest way to remove:
 To keep this deployment cheap:
 
 - use one temporary resource group
-- choose the smallest PostgreSQL `Burstable` option
+- choose the smallest PostgreSQL `Burstable` option (`Standard_B1ms`, ~$13/month)
 - disable PostgreSQL HA
 - use one storage account for both queue and blob
 - keep API at `min replicas = 0`
-- keep processor at `min replicas = 1` only because the current worker is always-on
+- keep processor at `min replicas = 1` only because the current worker polls continuously
 
-If testing spans more than one day, stop the PostgreSQL server when you are not using it.
+If testing spans more than one day, stop the PostgreSQL server when not in use.
 
-## Future Improvement
+Rough monthly cost at this scale: ~$20-30 (PostgreSQL dominates; Container Apps consumption is near-zero at low volume).
 
-The first improvement to reduce idle cost would be changing `mlprocessing` from a continuous worker container into an Azure Container Apps event-driven job triggered by Azure Queue.
+## Event-Driven Job Upgrade (recommended next step)
 
-That would let the processor scale closer to zero between jobs.
+The current processor polls Azure Queue in an infinite loop, which requires `min replicas = 1` at all times. Converting it to an **ACA event-driven job** lets it scale to zero between videos and only run when a queue message arrives — the single biggest cost and simplicity win.
+
+### What changes in the code
+
+`mlprocessing/main.py` currently loops forever. It needs to process exactly one job and exit:
+
+```python
+# Replace the infinite polling loop with a single-job run:
+from job_queue.azure_queue_client import AzureQueueClient
+from services.video_service import process_video_job
+
+client = AzureQueueClient()
+job = client.get_job()
+
+if job:
+    process_video_job(job["data"])
+    client.complete_job(job["receipt"])
+```
+
+ACA will launch a new container instance per queue message and pass the message as an environment variable, so the queue client can also be simplified to read `AZURE_STORAGE_QUEUE_MESSAGE` directly if preferred.
+
+### What changes in Azure
+
+Instead of a Container App (long-running replica), create an **ACA Job** with a queue-based scale trigger:
+
+```bash
+az containerapp job create \
+  --name video-intel-processor \
+  --resource-group rg-video-intel-test \
+  --environment cae-video-intel-test \
+  --trigger-type Event \
+  --replica-timeout 1800 \
+  --replica-retry-limit 1 \
+  --replica-completion-count 1 \
+  --parallelism 1 \
+  --image acrvideointeltest.azurecr.io/video-intel-processor:latest \
+  --scale-rule-name queue-trigger \
+  --scale-rule-type azure-queue \
+  --scale-rule-metadata "accountName=stvideointeltest" "queueName=video-processing-queue" "queueLength=1" \
+  --scale-rule-auth "connection=azure-storage-connection-string" \
+  --env-vars \
+      DATABASE_URL=secretref:database-url \
+      AZURE_STORAGE_CONNECTION_STRING=secretref:azure-storage-connection-string \
+      AZURE_QUEUE_NAME=video-processing-queue \
+      AZURE_BLOB_CONTAINER_NAME=videos
+```
+
+With this setup:
+- Zero cost when queue is empty
+- One container instance per video, auto-cleaned up after completion
+- `replica-timeout 1800` gives 30 minutes max per job (adjust to your longest expected video)
 
 ## Codebase Mapping
 

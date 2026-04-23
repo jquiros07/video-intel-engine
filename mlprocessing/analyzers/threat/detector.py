@@ -5,7 +5,7 @@ os.environ.setdefault("YOLO_CONFIG_DIR", str(Path(__file__).resolve().parents[2]
 from ultralytics import YOLO
 
 CONF_THRESHOLD = 0.5
-MODEL_PATH = os.getenv("YOLO_MODEL", "yolov5s.pt")
+MODEL_PATH = os.getenv("YOLO_MODEL", "yolov8n.pt")
 model = None
 
 
@@ -20,7 +20,7 @@ def get_model():
 
 def detect(frame):
     current_model = get_model()
-    results = current_model(frame)
+    results = current_model(frame, device="cpu", verbose=False)
 
     detections = []
 
