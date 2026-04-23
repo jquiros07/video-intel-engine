@@ -5,7 +5,7 @@ import { VideoProcessingStatus } from '../enums/video-processing-status.enum';
 import { deleteStoredVideo } from '../helpers/upload-storage';
 import { sendProcessResultsEmailMessage } from '../helpers/process-results-email';
 import { requireEnv } from '../helpers/utilities';
-import { storeUploadedVideo, validateVideoUpload } from '../helpers/video-upload';
+import { storeUploadedVideo } from '../helpers/video-upload';
 import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
 import Validator from 'validatorjs';
 
@@ -15,12 +15,10 @@ export const processVideo = async (req: Request, res: Response): Promise<Respons
     let jobId: string | null = null;
 
     try {
-        const uploadValidationError = validateVideoUpload(req);
-
-        if (uploadValidationError) {
-            return res.status(uploadValidationError.status).json({
-                message: 'Validation failed',
-                data: uploadValidationError.data
+        if (!authenticatedRequest.accessEmail) {
+            return res.status(403).json({
+                message: 'Forbidden',
+                data: null
             });
         }
 
@@ -31,13 +29,6 @@ export const processVideo = async (req: Request, res: Response): Promise<Respons
             return res.status(422).json({
                 message: 'Validation failed',
                 data: { video: ['Send multipart/form-data with a file field named "file" or provide videoUrl'] }
-            });
-        }
-
-        if (!authenticatedRequest.accessEmail) {
-            return res.status(403).json({
-                message: 'Forbidden',
-                data: null
             });
         }
 

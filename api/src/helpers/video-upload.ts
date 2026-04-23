@@ -1,70 +1,20 @@
 import { randomUUID } from 'crypto';
 import { Request } from 'express';
-import {
-    getFileExtension,
-    sanitizeUploadFileName,
-    uploadVideoBuffer
-} from './upload-storage';
+import { getFileExtension, sanitizeUploadFileName, uploadVideoBuffer } from './upload-storage';
+import { StoredVideoUpload } from '../types/StoredVideoUpload';
 
-const DEFAULT_VIDEO_UPLOAD_LIMIT = '500mb';
+export type { StoredVideoUpload };
+
 const DEFAULT_VIDEO_FILE_NAME = 'video-upload';
 const DEFAULT_VIDEO_UPLOAD_CONTENT_TYPE = 'application/octet-stream';
-const ALLOWED_VIDEO_MIME_TYPES = new Set([
-    'video/mp4',
-    'video/quicktime',
-    'video/x-msvideo',
-    'video/x-matroska',
-    'video/webm'
-]);
-
-export type UploadValidationError = {
-    status: number;
-    data: Record<string, string[]>;
-};
-
-export type StoredVideoUpload = {
-    blobName: string;
-    videoUrl: string;
-};
-
-export const validateVideoUpload = (req: Request): UploadValidationError | null => {
-    if (!req.file) {
-        return null;
-    }
-
-    if (!Buffer.isBuffer(req.file.buffer) || req.file.size === 0) {
-        return {
-            status: 422,
-            data: { video: ['Video file is empty'] }
-        };
-    }
-
-    const mimeType = normalizeMimeType(req.file.mimetype);
-
-    if (!mimeType || !ALLOWED_VIDEO_MIME_TYPES.has(mimeType)) {
-        return {
-            status: 422,
-            data: { video: [`Unsupported video mime type. Allowed types: ${Array.from(ALLOWED_VIDEO_MIME_TYPES).join(', ')}`] }
-        };
-    }
-
-    if (req.file.size > getUploadLimitInBytes()) {
-        return {
-            status: 413,
-            data: { video: [`Video file is too large. Max size is ${process.env.VIDEO_UPLOAD_LIMIT || DEFAULT_VIDEO_UPLOAD_LIMIT}`] }
-        };
-    }
-
-    return null;
-};
 
 export const storeUploadedVideo = async (req: Request): Promise<StoredVideoUpload | null> => {
     if (!req.file || !Buffer.isBuffer(req.file.buffer) || req.file.size === 0) {
         return null;
     }
 
-    const mimeType = normalizeMimeType(req.file.mimetype);
-    const requestedFileName = getRequestedFileName(req.file.originalname, mimeType);
+    const mimeType = req.file.mimetype.split(';')[0].trim().toLowerCase();
+    const requestedFileName = req.file.originalname?.trim() || `${DEFAULT_VIDEO_FILE_NAME}${getExtensionFromMimeType(mimeType)}`;
     const safeFileName = sanitizeUploadFileName(requestedFileName);
     const extension = getFileExtension(safeFileName) || getExtensionFromMimeType(mimeType);
     const storedFileName = `${Date.now()}-${randomUUID()}${extension}`;
@@ -76,54 +26,13 @@ export const storeUploadedVideo = async (req: Request): Promise<StoredVideoUploa
     );
 };
 
-const getRequestedFileName = (originalFileName?: string, mimeType?: string): string => {
-    return originalFileName?.trim() || `${DEFAULT_VIDEO_FILE_NAME}${getExtensionFromMimeType(mimeType)}`;
-};
-
-const getExtensionFromMimeType = (mimeType?: string): string => {
+function getExtensionFromMimeType(mimeType?: string): string {
     switch (mimeType) {
-        case 'video/mp4':
-            return '.mp4';
-        case 'video/quicktime':
-            return '.mov';
-        case 'video/x-msvideo':
-            return '.avi';
-        case 'video/x-matroska':
-            return '.mkv';
-        case 'video/webm':
-            return '.webm';
-        default:
-            return '.bin';
-    }
-};
-
-const normalizeMimeType = (mimeType?: string): string | undefined => {
-    return mimeType?.split(';')[0]?.trim().toLowerCase();
-};
-
-const getUploadLimitInBytes = (): number => {
-    return getSizeLimitInBytes(process.env.VIDEO_UPLOAD_LIMIT || DEFAULT_VIDEO_UPLOAD_LIMIT);
-};
-
-function getSizeLimitInBytes(rawLimitValue: string): number {
-    const rawLimit = rawLimitValue.trim().toLowerCase();
-    const match = rawLimit.match(/^(\d+)(b|kb|mb|gb)?$/);
-
-    if (!match) {
-        return 500 * 1024 * 1024;
-    }
-
-    const size = Number(match[1]);
-    const unit = match[2] || 'b';
-
-    switch (unit) {
-        case 'gb':
-            return size * 1024 * 1024 * 1024;
-        case 'mb':
-            return size * 1024 * 1024;
-        case 'kb':
-            return size * 1024;
-        default:
-            return size;
+        case 'video/mp4':       return '.mp4';
+        case 'video/quicktime': return '.mov';
+        case 'video/x-msvideo': return '.avi';
+        case 'video/x-matroska': return '.mkv';
+        case 'video/webm':      return '.webm';
+        default:                return '.bin';
     }
 }

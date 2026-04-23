@@ -1,6 +1,7 @@
 import json
 import os
 
+from azure.core.exceptions import ResourceExistsError
 from azure.storage.queue import QueueClient
 
 AZURE_STORAGE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
@@ -13,7 +14,10 @@ queue_client = QueueClient.from_connection_string(
     AZURE_STORAGE_CONNECTION_STRING,
     AZURE_QUEUE_NAME
 )
-queue_client.create_queue()
+try:
+    queue_client.create_queue()
+except ResourceExistsError:
+    pass
 
 
 def get_job(visibility_timeout=300):
