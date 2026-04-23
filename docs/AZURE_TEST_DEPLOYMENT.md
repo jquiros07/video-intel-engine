@@ -146,6 +146,7 @@ JWT_ALGORITHM=HS256
 JWT_EXPIRATION=60
 VIDEO_UPLOAD_LIMIT=50mb
 VIDEO_UPLOAD_PARSER_LIMIT=100mb
+SERVICE_SECRET=<strong-random-secret>
 SENDGRID_API_KEY=<sendgrid-api-key>
 SENDGRID_FROM_EMAIL=<verified-sender-email>
 SENDGRID_FROM_NAME=Video Intel Engine
@@ -160,7 +161,11 @@ DATABASE_URL=postgresql://<admin-user>:<password>@<server>.postgres.database.azu
 AZURE_STORAGE_CONNECTION_STRING=<storage-connection-string>
 AZURE_QUEUE_NAME=video-processing-queue
 AZURE_BLOB_CONTAINER_NAME=videos
+API_BASE_URL=https://<api-container-app-fqdn>/api
+SERVICE_SECRET=<same-strong-random-secret-as-api>
 ```
+
+`API_BASE_URL` must point to the API Container App's fully qualified domain name (found in the Azure portal under the Container App's overview). `SERVICE_SECRET` must be the same value set on the API.
 
 ### Secret Guidance
 
@@ -169,18 +174,21 @@ Store these as secrets in Azure Container Apps instead of plain environment vari
 - `DATABASE_URL`
 - `AZURE_STORAGE_CONNECTION_STRING`
 - `JWT_SECRET_KEY`
+- `SERVICE_SECRET`
 - `SENDGRID_API_KEY`
 
-## SendGrid Setup
+## Email Notifications
 
-If you want the API to send processing result emails, configure Twilio SendGrid before testing the `/api/send-email` endpoint.
+The processor automatically sends an email when a video finishes processing (both on success and failure) by calling the API's internal endpoint `POST /internal/send-email`. No manual trigger is needed.
 
-Minimum setup:
+For this to work, both `SERVICE_SECRET` and `SENDGRID_API_KEY` must be configured. If either is missing the notification is skipped silently — the job still completes normally.
+
+### SendGrid Setup
 
 1. Create a SendGrid account.
 2. Create a SendGrid API key with mail send permission.
 3. Verify a sender identity in SendGrid.
-4. Set these API container app settings:
+4. Set on the API container app:
    - `SENDGRID_API_KEY`
    - `SENDGRID_FROM_EMAIL`
    - optional `SENDGRID_FROM_NAME`
@@ -188,8 +196,8 @@ Minimum setup:
 Important notes:
 
 - `SENDGRID_FROM_EMAIL` must be a verified sender in your SendGrid account.
-- The API sends the results email to the `email` associated with the authenticated access token.
-- The email includes the `videoUrl`, the processing status, and the serialized `resultData`.
+- The email is sent to the address stored on the `VideoProcessing` record at job creation time.
+- The email includes the video URL, processing status, and result data.
 
 ## PostgreSQL Notes
 
@@ -227,11 +235,10 @@ Your local IP must be allowed by the PostgreSQL firewall for this to work.
 6. Build and push the two container images.
 7. Set `DATABASE_URL` locally and run `npx prisma db push` from `api`.
 8. Create the Container Apps environment.
-9. Deploy the `api` container app.
-10. Deploy the `processor` container app.
-11. Configure environment variables and secrets in both apps.
-12. If you want email delivery, configure SendGrid settings in the API container app.
-13. Test the API.
+9. Deploy the `api` container app with all environment variables, including `SERVICE_SECRET`.
+10. Deploy the `processor` container app with `API_BASE_URL` pointing to the API and the same `SERVICE_SECRET`.
+11. If you want automatic email notifications, configure `SENDGRID_API_KEY` and `SENDGRID_FROM_EMAIL` on the API container app.
+12. Test the API.
 
 ## Test Flow
 
@@ -264,27 +271,7 @@ Form fields:
 - a message lands in the queue
 - the processor picks it up
 - `VideoProcessing.status` changes from `PENDING` to `PROCESSING` and then `COMPLETED` or `FAILED`
-
-5. If SendGrid is configured, send the process results email:
-
-```http
-POST /api/send-email
-Authorization: Bearer <token>
-Content-Type: application/json
-```
-
-```json
-{
-  "videoProcessingId": "<video-processing-id>"
-}
-```
-
-Expected behavior:
-
-- the API looks up the `VideoProcessing` row for the authenticated email
-- the request fails if the record does not belong to that email
-- the request fails with `409` if `resultData` is not ready yet
-- the email includes the video URL and process results when available
+- if SendGrid is configured, an email is automatically sent to the address on the job once the processor finishes (no manual trigger needed)
 
 ## Cleanup
 
@@ -319,22 +306,7 @@ The current processor polls Azure Queue in an infinite loop, which requires `min
 
 ### What changes in the code
 
-`mlprocessing/main.py` currently loops forever. It needs to process exactly one job and exit:
-
-```python
-# Replace the infinite polling loop with a single-job run:
-from job_queue.azure_queue_client import AzureQueueClient
-from services.video_service import process_video_job
-
-client = AzureQueueClient()
-job = client.get_job()
-
-if job:
-    process_video_job(job["data"])
-    client.complete_job(job["receipt"])
-```
-
-ACA will launch a new container instance per queue message and pass the message as an environment variable, so the queue client can also be simplified to read `AZURE_STORAGE_QUEUE_MESSAGE` directly if preferred.
+`mlprocessing/main.py` already supports single-job-and-exit mode via the `WORKER_MODE` environment variable. In docker-compose, `WORKER_MODE=loop` keeps it polling continuously for local dev. In Azure, omit that variable (default is `job`) and it will process one message and exit — exactly what ACA event-driven jobs expect.
 
 ### What changes in Azure
 
@@ -359,7 +331,9 @@ az containerapp job create \
       DATABASE_URL=secretref:database-url \
       AZURE_STORAGE_CONNECTION_STRING=secretref:azure-storage-connection-string \
       AZURE_QUEUE_NAME=video-processing-queue \
-      AZURE_BLOB_CONTAINER_NAME=videos
+      AZURE_BLOB_CONTAINER_NAME=videos \
+      API_BASE_URL=https://<api-container-app-fqdn>/api \
+      SERVICE_SECRET=secretref:service-secret
 ```
 
 With this setup:

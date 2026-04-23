@@ -16,7 +16,6 @@ const router = Router();
 
 router.post("/request-access-token", requestAccessRateLimiter, requestAccessToken);
 router.post("/process-video", validateToken, parseVideoUpload, processVideo);
-router.post("/send-email", validateToken, sendProcessResultsEmail);
 router.post("/internal/send-email", validateServiceSecret, sendProcessResultsEmail);
 
 export default router;
