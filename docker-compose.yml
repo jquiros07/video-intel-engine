@@ -67,6 +67,8 @@ services:
       - WORKER_MODE=loop
       - API_BASE_URL=http://api:8080/api
       - SERVICE_SECRET=${SERVICE_SECRET:-localservicesecret}
+    volumes:
+      - ./logs/processor:/app/logs
     depends_on:
       postgres:
         condition: service_healthy

@@ -4,6 +4,9 @@ from loguru import logger
 from job_queue.azure_queue_client import complete_job, get_job
 from services.video_service import process_video_job
 
+os.makedirs("/app/logs", exist_ok=True)
+logger.add("/app/logs/processor.log", rotation="10 MB", retention="7 days")
+
 loop = os.getenv("WORKER_MODE", "job") == "loop"
 
 logger.info("Worker started (mode={})", "loop" if loop else "job")

@@ -22,8 +22,8 @@ app.use(express.json({ limit: '100kb' }));
 app.use(generalRateLimiter);
 app.use('/api', router);
 
-logger.info('Starting API server...');
+console.log('Starting API server...');
 
 app.listen(port, '0.0.0.0', () => {
-  logger.info({ port }, 'Server is running');
+  console.log(`Server is running on port ${port}`);
 });
