@@ -27,9 +27,14 @@ RUN npm ci --only=production
 
 COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/src/generated ./dist/generated
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+
+COPY entrypoint.sh ./
+RUN chmod +x entrypoint.sh
 
 # Azure App Service sets the PORT environment variable
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["npm", "start"]
+CMD ["./entrypoint.sh"]
