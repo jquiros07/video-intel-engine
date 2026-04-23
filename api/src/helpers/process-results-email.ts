@@ -37,7 +37,7 @@ export const sendProcessResultsEmailMessage = async ({
             formattedResultData
         ].join('\n'),
         html: `
-            <div style="margin:0;padding:32px 16px;background:linear-gradient(180deg,#f4efe6 0%,#f7f7f5 100%);font-family:Georgia,'Times New Roman',serif;color:#1f2937;">
+            <div style="margin:0;padding:32px 16px;background:linear-gradient(180deg,#f4efe6 0%,#f7f7f5 100%);font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1f2937;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;max-width:720px;margin:0 auto;">
                     <tr>
                         <td style="padding:0;">

@@ -28,6 +28,7 @@ def analyze(video_path):
 
     events = []
     prev_gray = None
+    last_fired = {}
 
     while True:
         ret, frame = cap.read()
@@ -39,7 +40,7 @@ def analyze(video_path):
 
             detections = detect(frame)
             prev_gray, motion_score = compute_motion(prev_gray, frame)
-            frame_events = evaluate(detections, motion_score, timestamp)
+            frame_events = evaluate(detections, motion_score, timestamp, last_fired)
 
             events.extend(frame_events)
 
@@ -57,7 +58,8 @@ def analyze(video_path):
 
 def compute_risk_score(events):
     unique_types = set(e["event"] for e in events)
-    score = min(len(unique_types) * _risk_cfg["score_per_unique_event"], 1.0)
+    weights = _risk_cfg["weights"]
+    score = min(sum(weights.get(t, 0.1) for t in unique_types), 1.0)
 
     if score >= _risk_cfg["high_threshold"]:
         level = "high"

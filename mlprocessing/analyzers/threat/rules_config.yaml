@@ -5,10 +5,18 @@ analyzer:
     - knife
     - scissors
 
+cooldown:
+  seconds: 3
+
 risk_score:
-  score_per_unique_event: 0.2
   high_threshold: 0.7
   medium_threshold: 0.4
+  weights:
+    possible_violence: 0.4
+    possible_threat: 0.35
+    aggressive_motion: 0.25
+    close_confrontation: 0.2
+    crowd_tension: 0.15
 
 close_confrontation:
   distance_threshold: 100
