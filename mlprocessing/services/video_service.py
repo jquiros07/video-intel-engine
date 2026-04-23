@@ -4,6 +4,7 @@ import urllib.parse
 import urllib.request
 
 from azure.storage.blob import BlobServiceClient
+from loguru import logger
 
 from analyzers.threat.threat_analyzer import analyze
 from db.video_processing import (
@@ -31,17 +32,27 @@ def process_video_job(data):
 
     local_video_path = None
     try:
+        logger.info("Processing started | video_id={}", video_id)
         update_status(video_id, VideoProcessingStatus.PROCESSING)
 
+        logger.info("Resolving video source | video_id={}", video_id)
         local_video_path, video_path = resolve_video_source(blob_name, video_source)
 
+        logger.info("Running threat analysis | video_id={}", video_id)
         result = analyze(video_path)
 
-        save_result(video_id, {
-            "threat": result
-        })
+        logger.info(
+            "Analysis complete | video_id={} events={} risk_score={}",
+            video_id,
+            result["summary"]["total_events"],
+            result["summary"]["risk_score"],
+        )
+
+        save_result(video_id, {"threat": result})
+        logger.info("Result saved | video_id={}", video_id)
         notify_completion(video_id)
     except Exception as error:
+        logger.exception("Processing failed | video_id={}", video_id)
         mark_failed(video_id, error)
         notify_completion(video_id)
         raise

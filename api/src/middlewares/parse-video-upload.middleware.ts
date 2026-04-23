@@ -31,23 +31,23 @@ export const parseVideoUpload = (req: Request, res: Response, next: NextFunction
         if (!error) {
             next();
         } else if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
-            res.status(413).json({
+            return res.status(413).json({
                 message: 'Validation failed',
                 data: { video: [`Video file too large. Max size: ${process.env.VIDEO_UPLOAD_LIMIT || DEFAULT_VIDEO_UPLOAD_LIMIT}`] }
             });
         } else if (error.message === 'INVALID_MIME_TYPE') {
-            res.status(422).json({
+            return res.status(422).json({
                 message: 'Validation failed',
                 data: { video: [`Unsupported video type. Allowed: ${Array.from(ALLOWED_VIDEO_MIME_TYPES).join(', ')}`] }
             });
         } else if (error instanceof MulterError) {
-            res.status(422).json({
+            return res.status(422).json({
                 message: 'Validation failed',
                 data: { file: ['Send multipart/form-data with a file field named "file"'] }
             });
         } else {
             console.error('Video upload parsing failed', error);
-            res.status(400).json({
+            return res.status(400).json({
                 message: 'Validation failed',
                 data: { file: ['Invalid multipart/form-data request'] }
             });

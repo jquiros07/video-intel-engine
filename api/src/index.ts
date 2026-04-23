@@ -1,8 +1,10 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import pinoHttp from 'pino-http';
 import router from './routes/routes';
 import { rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
+import { logger } from './logger';
 dotenv.config();
 
 const app = express();
@@ -14,17 +16,14 @@ const generalRateLimiter = rateLimit({
   message: 'Too many requests, please try again later.'
 });
 
+app.use(pinoHttp({ logger }));
 app.use(helmet());
 app.use(express.json({ limit: '100kb' }));
 app.use(generalRateLimiter);
 app.use('/api', router);
 
-try {
-  console.log('Starting API server...');
+logger.info('Starting API server...');
 
-  app.listen(port, '0.0.0.0', () => {
-    console.log(`Server is running on port ${port}`);
-  });
-} catch (error) {
-  console.error('Server error', error);
-}
+app.listen(port, '0.0.0.0', () => {
+  logger.info({ port }, 'Server is running');
+});

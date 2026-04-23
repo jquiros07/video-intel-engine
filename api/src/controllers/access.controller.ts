@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { RequestAccess } from '../types/RequestAccess';
 import Validator from 'validatorjs';
 import { prisma } from '../db';
+import { logger } from '../logger';
 
 export const requestAccessToken = async (req: Request, res: Response): Promise<Response> => {
     try {
@@ -18,9 +19,10 @@ export const requestAccessToken = async (req: Request, res: Response): Promise<R
             return res.status(422).json({ message: 'Validation failed', data: validator.errors.all() });
         }
 
+        logger.info({ email: body.email }, 'Access token requested');
+
         const token = generateToken(body);
 
-        // Parse JWT_EXPIRATION (in minutes) to calculate expiration for DB
         const expStr = requireEnv('JWT_EXPIRATION');
         const minutes = parseInt(expStr, 10) || 60;
         const expiresAt = new Date(Date.now() + minutes * 60 * 1000);
@@ -33,9 +35,10 @@ export const requestAccessToken = async (req: Request, res: Response): Promise<R
             }
         });
 
+        logger.info({ email: body.email }, 'Access token granted');
         return res.status(200).json({ message: 'Request granted', data: { token } });
     } catch (error) {
-        console.error('Error during access token request', error);
+        logger.error({ err: error }, 'Error during access token request');
         return res.status(500).json({ message: 'Internal server error', data: null });
     }
 };

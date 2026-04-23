@@ -1,4 +1,5 @@
 import cv2
+from loguru import logger
 
 from analyzers.threat.detector import detect
 from analyzers.threat.motion import compute_motion
@@ -8,6 +9,7 @@ FRAME_INTERVAL = 2  # seconds
 
 
 def analyze(video_path):
+    logger.info("Opening video | path={}", video_path)
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         cap.release()
@@ -37,10 +39,12 @@ def analyze(video_path):
         frame_id += 1
 
     cap.release()
+    summary = build_summary(events)
+    logger.info("Video analysis done | frames_processed={} events={} risk_score={}", frame_id, summary["total_events"], summary["risk_score"])
 
     return {
         "events": events,
-        "summary": build_summary(events)
+        "summary": summary
     }
 
 

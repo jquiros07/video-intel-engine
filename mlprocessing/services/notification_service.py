@@ -1,6 +1,7 @@
 import os
 
 import requests
+from loguru import logger
 
 API_BASE_URL = os.getenv("API_BASE_URL", "").rstrip("/")
 SERVICE_SECRET = os.getenv("SERVICE_SECRET", "")
@@ -8,7 +9,7 @@ SERVICE_SECRET = os.getenv("SERVICE_SECRET", "")
 
 def notify_completion(video_id):
     if not API_BASE_URL or not SERVICE_SECRET:
-        print(f"Notification skipped for {video_id}: API_BASE_URL or SERVICE_SECRET not set")
+        logger.warning("Notification skipped | video_id={} reason=API_BASE_URL or SERVICE_SECRET not set", video_id)
         return
     try:
         response = requests.post(
@@ -18,6 +19,6 @@ def notify_completion(video_id):
             timeout=10
         )
         response.raise_for_status()
-        print(f"Notification sent for {video_id}")
-    except Exception as e:
-        print(f"Notification failed for {video_id}: {e}")
+        logger.info("Completion notification sent | video_id={}", video_id)
+    except Exception:
+        logger.exception("Completion notification failed | video_id={}", video_id)

@@ -47,6 +47,8 @@ services:
       - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
       - SENDGRID_FROM_EMAIL=${SENDGRID_FROM_EMAIL:-}
       - SENDGRID_FROM_NAME=${SENDGRID_FROM_NAME:-Video Intel Engine}
+    volumes:
+      - ./logs/api:/app/logs
     depends_on:
       postgres:
         condition: service_healthy

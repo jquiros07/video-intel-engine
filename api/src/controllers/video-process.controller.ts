@@ -8,6 +8,7 @@ import { requireEnv } from '../helpers/utilities';
 import { storeUploadedVideo } from '../helpers/video-upload';
 import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
 import Validator from 'validatorjs';
+import { logger } from '../logger';
 
 export const processVideo = async (req: Request, res: Response): Promise<Response> => {
     const authenticatedRequest = req as AuthenticatedRequest;
@@ -32,6 +33,8 @@ export const processVideo = async (req: Request, res: Response): Promise<Respons
             });
         }
 
+        logger.info({ email: authenticatedRequest.accessEmail, videoUrl }, 'Queuing video for processing');
+
         const job = await prisma.videoProcessing.create({
             data: {
                 email: authenticatedRequest.accessEmail,
@@ -52,6 +55,7 @@ export const processVideo = async (req: Request, res: Response): Promise<Respons
             blobName: uploadedVideo?.blobName
         }));
 
+        logger.info({ jobId: job.id, email: authenticatedRequest.accessEmail }, 'Video queued successfully');
         return res.status(201).json({
             message: 'Video queued for processing',
             data: {
@@ -65,7 +69,7 @@ export const processVideo = async (req: Request, res: Response): Promise<Respons
             await deleteStoredVideo(uploadedVideo.blobName).catch(() => null);
         }
 
-        console.error('Error queuing video for processing', error);
+        logger.error({ err: error }, 'Error queuing video for processing');
         return res.status(500).json({ message: 'Internal server error', data: null });
     }
 };
@@ -104,6 +108,8 @@ export const sendProcessResultsEmail = async (req: Request, res: Response): Prom
             });
         }
 
+        logger.info({ videoProcessingId: videoProcessing.id, email: videoProcessing.email }, 'Sending process results email');
+
         await sendProcessResultsEmailMessage({
             to: videoProcessing.email,
             videoProcessingId: videoProcessing.id,
@@ -112,6 +118,7 @@ export const sendProcessResultsEmail = async (req: Request, res: Response): Prom
             resultData: videoProcessing.resultData
         });
 
+        logger.info({ videoProcessingId: videoProcessing.id, email: videoProcessing.email }, 'Process results email sent');
         return res.status(200).json({
             message: 'Process results email sent successfully',
             data: {
@@ -120,7 +127,7 @@ export const sendProcessResultsEmail = async (req: Request, res: Response): Prom
             }
         });
     } catch (error) {
-        console.error('Error sending process results email', error);
+        logger.error({ err: error }, 'Error sending process results email');
         return res.status(500).json({ message: 'Internal server error', data: null });
     }
 };
