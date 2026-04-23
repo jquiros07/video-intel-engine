@@ -3,5 +3,6 @@ azure-storage-queue
 loguru
 opencv-python-headless
 psycopg2-binary
+pyyaml
 requests
 ultralytics

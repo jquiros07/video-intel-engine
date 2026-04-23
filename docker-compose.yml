@@ -44,9 +44,9 @@ services:
       - JWT_EXPIRATION=${JWT_EXPIRATION:-60}
       - VIDEO_UPLOAD_LIMIT=500mb
       - SERVICE_SECRET=${SERVICE_SECRET:-localservicesecret}
-      - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
-      - SENDGRID_FROM_EMAIL=${SENDGRID_FROM_EMAIL:-}
-      - SENDGRID_FROM_NAME=${SENDGRID_FROM_NAME:-Video Intel Engine}
+      - MAILTRAP_API_TOKEN=${MAILTRAP_API_TOKEN:-}
+      - MAILTRAP_FROM_EMAIL=${MAILTRAP_FROM_EMAIL:-}
+      - MAILTRAP_FROM_NAME=${MAILTRAP_FROM_NAME:-Video Intel Engine}
     volumes:
       - ./logs/api:/app/logs
     depends_on:

@@ -1,11 +1,18 @@
+from pathlib import Path
+
 import cv2
+import yaml
 from loguru import logger
 
 from analyzers.threat.detector import detect
 from analyzers.threat.motion import compute_motion
 from analyzers.threat.rules import evaluate
 
-FRAME_INTERVAL = 2  # seconds
+with open(Path(__file__).parent / "rules_config.yaml") as f:
+    _cfg = yaml.safe_load(f)
+
+FRAME_INTERVAL = _cfg["analyzer"]["frame_interval"]
+_risk_cfg = _cfg["risk_score"]
 
 
 def analyze(video_path):
@@ -48,10 +55,30 @@ def analyze(video_path):
     }
 
 
+def compute_risk_score(events):
+    unique_types = set(e["event"] for e in events)
+    score = min(len(unique_types) * _risk_cfg["score_per_unique_event"], 1.0)
+
+    if score >= _risk_cfg["high_threshold"]:
+        level = "high"
+    elif score >= _risk_cfg["medium_threshold"]:
+        level = "medium"
+    else:
+        level = "low"
+
+    return round(score, 2), level
+
+
 def build_summary(events):
-    risk_score = min(len(events) * 0.1, 1.0)
+    risk_score, risk_level = compute_risk_score(events)
+
+    breakdown = {}
+    for e in events:
+        breakdown[e["event"]] = breakdown.get(e["event"], 0) + 1
 
     return {
         "total_events": len(events),
-        "risk_score": round(risk_score, 2)
+        "risk_score": risk_score,
+        "risk_level": risk_level,
+        "breakdown": breakdown
     }

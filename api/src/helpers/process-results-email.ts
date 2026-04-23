@@ -1,14 +1,7 @@
-import sgMail from '@sendgrid/mail';
+import { MailtrapClient } from 'mailtrap';
 import { VideoProcessingStatus } from '../enums/video-processing-status.enum';
 import { requireEnv } from './utilities';
-
-type ProcessResultsEmailInput = {
-    to: string;
-    videoProcessingId: string;
-    videoUrl: string;
-    status: string;
-    resultData: unknown;
-};
+import { ProcessResultsEmailInput } from '../types/ProcessResultsEmailInput';
 
 export const sendProcessResultsEmailMessage = async ({
     to,
@@ -17,10 +10,10 @@ export const sendProcessResultsEmailMessage = async ({
     status,
     resultData
 }: ProcessResultsEmailInput): Promise<void> => {
-    sgMail.setApiKey(requireEnv('SENDGRID_API_KEY'));
+    const client = new MailtrapClient({ token: requireEnv('MAILTRAP_API_TOKEN') });
 
-    const fromEmail = requireEnv('SENDGRID_FROM_EMAIL');
-    const fromName = process.env.SENDGRID_FROM_NAME?.trim();
+    const fromEmail = requireEnv('MAILTRAP_FROM_EMAIL');
+    const fromName = process.env.MAILTRAP_FROM_NAME?.trim();
     const formattedResultData = JSON.stringify(resultData, null, 2);
     const normalizedStatus = status.trim().toUpperCase();
     const statusTheme = getStatusTheme(normalizedStatus);
@@ -29,9 +22,9 @@ export const sendProcessResultsEmailMessage = async ({
     const escapedStatus = escapeHtml(normalizedStatus);
     const escapedFormattedResultData = escapeHtml(formattedResultData);
 
-    await sgMail.send({
-        to,
-        from: fromName ? { email: fromEmail, name: fromName } : fromEmail,
+    await client.send({
+        to: [{ email: to }],
+        from: { email: fromEmail, name: fromName ?? 'Video Intel Engine' },
         subject: `Video processing results: ${videoProcessingId}`,
         text: [
             'Your video processing request has finished.',
@@ -84,8 +77,8 @@ export const sendProcessResultsEmailMessage = async ({
                                 <div style="margin-bottom:12px;font-size:12px;font-weight:bold;letter-spacing:0.12em;text-transform:uppercase;color:#64748b;">
                                     Process results
                                 </div>
-                                <div style="background:#111827;border-radius:18px;padding:20px;overflow:auto;">
-                                    <pre style="margin:0;white-space:pre-wrap;word-break:break-word;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:13px;line-height:1.7;color:#d1fae5;">${escapedFormattedResultData}</pre>
+                                <div style="background:#111827;border-radius:18px;padding:20px;overflow:auto;max-height:400px;">
+                                    <pre style="margin:0;white-space:pre;word-break:normal;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:13px;line-height:1.7;color:#d1fae5;">${escapedFormattedResultData}</pre>
                                 </div>
 
                                 <div style="margin-top:28px;padding-top:20px;border-top:1px solid #e5e7eb;font-size:13px;line-height:1.7;color:#6b7280;">

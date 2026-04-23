@@ -1,0 +1,31 @@
+analyzer:
+  frame_interval: 2
+  conf_threshold: 0.5
+  weapon_labels:
+    - knife
+    - scissors
+
+risk_score:
+  score_per_unique_event: 0.2
+  high_threshold: 0.7
+  medium_threshold: 0.4
+
+close_confrontation:
+  distance_threshold: 100
+  confidence: 0.6
+
+crowd_tension:
+  min_persons: 4
+  confidence: 0.6
+
+aggressive_motion:
+  motion_score_threshold: 25
+  confidence: 0.65
+
+possible_threat:
+  confidence: 0.7
+
+possible_violence:
+  motion_score_threshold: 25
+  min_close_pairs: 1
+  confidence: 0.75
