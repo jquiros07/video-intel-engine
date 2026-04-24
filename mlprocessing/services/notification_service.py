@@ -16,7 +16,7 @@ def notify_completion(video_id):
             f"{API_BASE_URL}/internal/send-email",
             json={"videoProcessingId": video_id},
             headers={"x-service-secret": SERVICE_SECRET},
-            timeout=10
+            timeout=60
         )
         response.raise_for_status()
         logger.info("Completion notification sent | video_id={}", video_id)

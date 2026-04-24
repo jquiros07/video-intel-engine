@@ -1,0 +1,19 @@
+prefix   = "video-intel"
+location = "eastus"
+
+image_tag = "latest"
+
+db_admin_username = "videointeladmin"
+db_admin_password = "Ch@ngeMe123!"   # Must include uppercase, lowercase, digit, and special char
+
+jwt_secret_key = "replace-with-a-long-random-secret"
+service_secret = "replace-with-a-long-random-secret"
+
+# Optional — email notifications are skipped if empty
+mailtrap_api_token  = ""
+mailtrap_from_email = ""
+mailtrap_from_name  = "Video Intel Engine"
+
+# Set this to your public IP so `prisma db push` can reach PostgreSQL
+# Find it with: curl ifconfig.me
+my_ip_address = ""

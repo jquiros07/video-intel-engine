@@ -14,12 +14,14 @@ export const validateToken = async (req: Request, res: Response, next: NextFunct
         const authHeader = req.headers.authorization;
 
         if (!authHeader?.startsWith('Bearer ')) {
+            req.resume();
             return res.status(403).json({ message: 'Forbidden', data: null });
         }
 
         const token = authHeader.split(' ')[1];
 
         if (!token) {
+            req.resume();
             return res.status(403).json({ message: 'Forbidden', data: null });
         }
 
@@ -28,6 +30,7 @@ export const validateToken = async (req: Request, res: Response, next: NextFunct
         const decodedToken = jwt.verify(token, key, { algorithms: [algorithm] }) as AccessTokenPayload | string;
 
         if (typeof decodedToken === 'string' || !decodedToken.email) {
+            req.resume();
             return res.status(403).json({ message: 'Forbidden', data: null });
         }
 
@@ -36,16 +39,19 @@ export const validateToken = async (req: Request, res: Response, next: NextFunct
         });
 
         if (!existingToken) {
+            req.resume();
             return res.status(403).json({ message: 'Forbidden: Invalid token', data: null });
         }
 
         if (existingToken.expiresAt < new Date()) {
+            req.resume();
             return res.status(403).json({ message: 'Forbidden: Token expired', data: null });
         }
 
         authenticatedRequest.accessEmail = decodedToken.email;
         next();
     } catch (error) {
+        req.resume();
         return res.status(403).json({ message: 'Forbidden', data: null });
     }
 };

@@ -15,7 +15,7 @@ const requestAccessRateLimiter = rateLimit({
 const router = Router();
 
 router.post("/request-access-token", requestAccessRateLimiter, requestAccessToken);
-router.post("/process-video", validateToken, parseVideoUpload, processVideo);
+router.post("/process-video", parseVideoUpload, validateToken, processVideo);
 router.post("/internal/send-email", validateServiceSecret, sendProcessResultsEmail);
 
 export default router;
