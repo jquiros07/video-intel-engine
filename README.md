@@ -1,4 +1,4 @@
-# video-intel-engine
+# Video Intel Engine
 
 A demo/portfolio project that accepts video uploads, queues them for background ML processing, and returns a structured threat-analysis report. Built to showcase an event-driven microservice architecture on Azure using Node.js, Python, and Terraform.
 
@@ -11,6 +11,12 @@ A demo/portfolio project that accepts video uploads, queues them for background 
 3. The API stores the video in Azure Blob Storage, creates a processing record, and enqueues a job.
 4. The ML processor picks up the job, downloads the video, and runs threat analysis frame by frame.
 5. Results are persisted to the database and an email notification is sent.
+
+<br><br>
+
+![Video Intel Engine Flow](vie.png)
+
+<br><br>
 
 ---
 
