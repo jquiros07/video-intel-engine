@@ -14,7 +14,7 @@ A demo/portfolio project that accepts video uploads, queues them for background 
 
 <br><br>
 
-![Video Intel Engine Flow](vie.png)
+![Video Intel Engine Flow](vidinten.png)
 
 <br><br>
 
