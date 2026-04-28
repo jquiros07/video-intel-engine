@@ -4,6 +4,9 @@ analyzer:
   weapon_labels:
     - knife
     - scissors
+    - baseball bat
+    - bottle
+    - sports ball
 
 cooldown:
   seconds: 3
@@ -14,7 +17,9 @@ risk_score:
   weights:
     possible_violence: 0.4
     possible_threat: 0.35
+    aggressive_pose: 0.3
     aggressive_motion: 0.25
+    trajectory_following: 0.25
     close_confrontation: 0.2
     crowd_tension: 0.15
 
@@ -37,3 +42,11 @@ possible_violence:
   motion_score_threshold: 25
   min_close_pairs: 1
   confidence: 0.75
+
+aggressive_pose:
+  confidence: 0.72
+
+trajectory_following:
+  min_frames: 5
+  approach_threshold: 0.35
+  confidence: 0.65

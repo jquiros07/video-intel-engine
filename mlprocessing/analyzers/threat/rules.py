@@ -11,6 +11,8 @@ _crowd = _cfg["crowd_tension"]
 _motion = _cfg["aggressive_motion"]
 _threat = _cfg["possible_threat"]
 _violence = _cfg["possible_violence"]
+_pose_cfg = _cfg["aggressive_pose"]
+_traj_cfg = _cfg["trajectory_following"]
 _cooldown = _cfg["cooldown"]["seconds"]
 
 
@@ -33,7 +35,27 @@ def _fire(event_type, event_data, timestamp, last_fired, events):
     events.append(event_data)
 
 
-def evaluate(detections, motion_score, timestamp, last_fired):
+def _detect_approach(trajectories):
+    """Returns True if any pair of tracked persons is consistently closing distance."""
+    ids = list(trajectories.keys())
+    min_frames = _traj_cfg["min_frames"]
+    threshold = _traj_cfg["approach_threshold"]
+
+    for i in range(len(ids)):
+        for j in range(i + 1, len(ids)):
+            hist_a = list(trajectories[ids[i]])
+            hist_b = list(trajectories[ids[j]])
+            n = min(len(hist_a), len(hist_b))
+            if n < min_frames:
+                continue
+            d_start = distance(hist_a[-n], hist_b[-n])
+            d_end = distance(hist_a[-1], hist_b[-1])
+            if d_start > 0 and (d_start - d_end) / d_start >= threshold:
+                return True
+    return False
+
+
+def evaluate(detections, motion_score, timestamp, last_fired, poses=None, trajectories=None):
     events = []
 
     persons = [d for d in detections if d["label"] == "person"]
@@ -85,6 +107,21 @@ def evaluate(detections, motion_score, timestamp, last_fired):
             "event": "possible_violence",
             "timestamp": timestamp,
             "confidence": _violence["confidence"]
+        }, timestamp, last_fired, events)
+
+    if poses and any(p["is_aggressive"] for p in poses) and _can_fire("aggressive_pose", timestamp, last_fired):
+        _fire("aggressive_pose", {
+            "event": "aggressive_pose",
+            "timestamp": timestamp,
+            "confidence": _pose_cfg["confidence"]
+        }, timestamp, last_fired, events)
+
+    if (trajectories and _detect_approach(trajectories)
+            and _can_fire("trajectory_following", timestamp, last_fired)):
+        _fire("trajectory_following", {
+            "event": "trajectory_following",
+            "timestamp": timestamp,
+            "confidence": _traj_cfg["confidence"]
         }, timestamp, last_fired, events)
 
     return events

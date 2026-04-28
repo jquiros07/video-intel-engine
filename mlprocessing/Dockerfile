@@ -14,10 +14,11 @@ RUN pip install --no-cache-dir torch torchvision --index-url https://download.py
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Bake the model in at build time — avoids runtime downloads in Azure
+# Bake models in at build time — avoids runtime downloads in Azure
 ENV YOLO_CONFIG_DIR=/app/.yolo
-ENV YOLO_MODEL=yolov8n.pt
-RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')"
+ENV YOLO_MODEL=yolov8s.pt
+ENV YOLO_POSE_MODEL=yolov8s-pose.pt
+RUN python -c "from ultralytics import YOLO; YOLO('yolov8s.pt'); YOLO('yolov8s-pose.pt')"
 
 COPY . .
 

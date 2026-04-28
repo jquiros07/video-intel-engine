@@ -1,21 +1,13 @@
 import path from 'path';
-import { BlobServiceClient } from '@azure/storage-blob';
+import { BlobServiceClient, BlobSASPermissions } from '@azure/storage-blob';
 import { requireEnv } from './utilities';
+
+const SAS_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 const getContainerClient = () => {
     return BlobServiceClient
         .fromConnectionString(requireEnv('AZURE_STORAGE_CONNECTION_STRING'))
         .getContainerClient(process.env.AZURE_BLOB_CONTAINER_NAME || 'videos');
-};
-
-const buildVideoUrl = (blobUrl: string, fileName: string): string => {
-    const publicBaseUrl = process.env.AZURE_BLOB_PUBLIC_BASE_URL?.trim().replace(/\/+$/, '');
-
-    if (!publicBaseUrl) {
-        return blobUrl;
-    }
-
-    return `${publicBaseUrl}/${encodeURIComponent(fileName)}`;
 };
 
 export const uploadVideoBuffer = async (
@@ -31,10 +23,12 @@ export const uploadVideoBuffer = async (
         blobHTTPHeaders: contentType ? { blobContentType: contentType } : undefined
     });
 
-    return {
-        blobName: fileName,
-        videoUrl: buildVideoUrl(blobClient.url, fileName)
-    };
+    const videoUrl = await blobClient.generateSasUrl({
+        permissions: BlobSASPermissions.parse('r'),
+        expiresOn: new Date(Date.now() + SAS_TTL_MS),
+    });
+
+    return { blobName: fileName, videoUrl };
 };
 
 export const deleteStoredVideo = async (blobName: string): Promise<void> => {

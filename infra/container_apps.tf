@@ -192,9 +192,9 @@ resource "azurerm_container_app_job" "processor" {
     container {
       name   = "processor"
       image  = "${azurerm_container_registry.main.login_server}/video-intel-processor:${var.image_tag}"
-      # YOLOv8n CPU inference — increase cpu/memory for larger models or longer videos
-      cpu    = 1.0
-      memory = "2Gi"
+      # YOLOv8s + YOLOv8s-pose dual inference on CPU
+      cpu    = 2.0
+      memory = "4Gi"
 
       env {
         name        = "AZURE_STORAGE_CONNECTION_STRING"

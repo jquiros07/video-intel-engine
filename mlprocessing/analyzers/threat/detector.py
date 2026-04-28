@@ -10,7 +10,7 @@ with open(Path(__file__).parent / "rules_config.yaml") as f:
     _cfg = yaml.safe_load(f)
 
 CONF_THRESHOLD = _cfg["analyzer"]["conf_threshold"]
-MODEL_PATH = os.getenv("YOLO_MODEL", "yolov8n.pt")
+MODEL_PATH = os.getenv("YOLO_MODEL", "yolov8s.pt")
 model = None
 
 
@@ -25,7 +25,7 @@ def get_model():
 
 def detect(frame):
     current_model = get_model()
-    results = current_model(frame, device="cpu", verbose=False)
+    results = current_model.track(frame, device="cpu", verbose=False, persist=True, tracker="bytetrack.yaml")
 
     detections = []
 
@@ -39,11 +39,13 @@ def detect(frame):
                 continue
 
             x1, y1, x2, y2 = map(int, box.xyxy[0])
+            track_id = int(box.id) if box.id is not None else None
 
             detections.append({
                 "label": label,
                 "confidence": conf,
-                "bbox": [x1, y1, x2, y2]
+                "bbox": [x1, y1, x2, y2],
+                "track_id": track_id
             })
 
     return detections

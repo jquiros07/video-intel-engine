@@ -1,3 +1,4 @@
+from collections import defaultdict, deque
 from pathlib import Path
 
 import cv2
@@ -6,6 +7,7 @@ from loguru import logger
 
 from analyzers.threat.detector import detect
 from analyzers.threat.motion import compute_motion
+from analyzers.threat.pose import analyze_pose
 from analyzers.threat.rules import evaluate
 
 with open(Path(__file__).parent / "rules_config.yaml") as f:
@@ -29,6 +31,7 @@ def analyze(video_path):
     events = []
     prev_gray = None
     last_fired = {}
+    trajectories = defaultdict(lambda: deque(maxlen=10))
 
     while True:
         ret, frame = cap.read()
@@ -40,7 +43,17 @@ def analyze(video_path):
 
             detections = detect(frame)
             prev_gray, motion_score = compute_motion(prev_gray, frame)
-            frame_events = evaluate(detections, motion_score, timestamp, last_fired)
+            poses = analyze_pose(frame)
+
+            for d in detections:
+                if d["label"] == "person" and d["track_id"] is not None:
+                    x1, y1, x2, y2 = d["bbox"]
+                    trajectories[d["track_id"]].append(((x1 + x2) // 2, (y1 + y2) // 2))
+
+            frame_events = evaluate(
+                detections, motion_score, timestamp, last_fired,
+                poses=poses, trajectories=dict(trajectories)
+            )
 
             events.extend(frame_events)
 
