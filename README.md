@@ -135,6 +135,19 @@ curl -X POST http://localhost:8080/api/process-video \
 
 ---
 
+## CI
+
+A GitHub Actions workflow (`.github/workflows/quick_health_check.yml`) runs on every push and pull request with two parallel jobs:
+
+| Job | Steps |
+|---|---|
+| **API** | `npm ci` → Prisma client generation → TypeScript type-check → build |
+| **ML Processing** | Ruff lint → core module import health check |
+
+The ML health check intentionally skips ultralytics/OpenCV to keep CI fast — it validates the pure logic layer (rules, config parsing) without requiring GPU or model downloads.
+
+---
+
 ## Cloud deployment
 
 See [infra/DEPLOY.md](infra/DEPLOY.md) for the full Terraform-based deployment guide.

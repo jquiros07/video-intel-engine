@@ -1,10 +1,13 @@
 # Terraform Deployment
 
+> **Tested on:** Windows 11 · Terraform v1.14.9 · PowerShell 5.1
+> All commands in this guide use PowerShell syntax. The `-target` flags use a space (not `=`) which is required on Windows — `=` causes PowerShell to misparse the resource address.
+
 ## Prerequisites
 
 Make sure these are installed:
 
-```bash
+```powershell
 az version
 terraform -version
 docker version
@@ -16,7 +19,7 @@ docker version
 
 ### 1. Log in to Azure
 
-```bash
+```powershell
 az login
 ```
 
@@ -24,14 +27,14 @@ az login
 
 Only needed once per subscription:
 
-```bash
+```powershell
 az provider register --namespace Microsoft.App
 az provider register --namespace Microsoft.OperationalInsights
 ```
 
 ### 3. Create your tfvars file
 
-```bash
+```powershell
 cd infra
 cp terraform.tfvars.example terraform.tfvars
 ```
@@ -45,37 +48,32 @@ Fill in `terraform.tfvars`:
 
 ### 4. Provision base infrastructure (ACR, storage, database)
 
-```bash
+```powershell
 terraform init
-terraform apply \
-  -target=azurerm_resource_group.main \
-  -target=azurerm_log_analytics_workspace.main \
-  -target=azurerm_storage_account.main \
-  -target=azurerm_storage_container.videos \
-  -target=azurerm_storage_queue.main \
-  -target=azurerm_postgresql_flexible_server.main \
-  -target=azurerm_postgresql_flexible_server_database.main \
-  -target=azurerm_postgresql_flexible_server_firewall_rule.allow_azure_services \
-  -target=azurerm_container_registry.main
+terraform apply -target azurerm_resource_group.main -target azurerm_log_analytics_workspace.main -target azurerm_storage_account.main -target azurerm_storage_container.videos -target azurerm_storage_queue.main -target azurerm_postgresql_flexible_server.main -target azurerm_postgresql_flexible_server_database.main -target azurerm_postgresql_flexible_server_firewall_rule.allow_azure_services -target azurerm_container_registry.main
 ```
 
 Type `yes` when prompted. Takes ~5–10 minutes (PostgreSQL is the slow part).
 
 ### 5. Build and push Docker images
 
-From the **repo root**:
+From `infra/`, get the generated docker commands:
 
-```bash
+```powershell
 terraform output -raw docker_commands
 ```
 
-Copy the output and run those commands. They log in to ACR, build both images, and push them.
+Then **go to the repo root** and run the commands from the output. They log in to ACR, build both images, and push them.
+
+```powershell
+cd ..
+```
 
 ### 6. Deploy Container Apps
 
 From `infra/`:
 
-```bash
+```powershell
 terraform apply
 ```
 
@@ -85,7 +83,7 @@ This creates the API Container App and the processor ACA Job now that the images
 
 From `infra/`, get the DATABASE_URL:
 
-```bash
+```powershell
 terraform output -raw prisma_migrate_command
 ```
 
@@ -99,7 +97,7 @@ npx prisma db push
 
 ### 8. Get the API URL
 
-```bash
+```powershell
 terraform output api_url
 ```
 
@@ -118,15 +116,11 @@ Then upload a video and check **Container Apps Jobs → Execution history** in t
 
 From the **repo root**:
 
-```bash
+```powershell
 az acr login --name <acr-name>
 docker build -t <acr-name>.azurecr.io/video-intel-api:latest ./api
 docker push <acr-name>.azurecr.io/video-intel-api:latest
-az containerapp update \
-  --name ca-video-intel-api \
-  --resource-group rg-video-intel \
-  --image <acr-name>.azurecr.io/video-intel-api:latest \
-  --revision-suffix <new-suffix>
+az containerapp update --name ca-video-intel-api --resource-group rg-video-intel --image <acr-name>.azurecr.io/video-intel-api:latest --revision-suffix <new-suffix>
 ```
 
 Get the ACR name with `terraform output acr_name`.
@@ -135,7 +129,7 @@ Get the ACR name with `terraform output acr_name`.
 
 From the **repo root**:
 
-```bash
+```powershell
 az acr login --name <acr-name>
 docker build -t <acr-name>.azurecr.io/video-intel-processor:latest ./mlprocessing
 docker push <acr-name>.azurecr.io/video-intel-processor:latest
@@ -147,7 +141,7 @@ No update command needed — the ACA Job pulls the latest image on every executi
 
 ## Teardown
 
-```bash
+```powershell
 az group delete --name rg-video-intel --yes
 ```
 

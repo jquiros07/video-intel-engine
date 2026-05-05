@@ -32,7 +32,7 @@ crowd_tension:
   confidence: 0.6
 
 aggressive_motion:
-  motion_score_threshold: 25
+  motion_score_threshold: 35
   confidence: 0.65
 
 possible_threat:
@@ -45,6 +45,7 @@ possible_violence:
 
 aggressive_pose:
   confidence: 0.72
+  min_motion_score: 18
 
 trajectory_following:
   min_frames: 5

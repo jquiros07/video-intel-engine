@@ -74,7 +74,10 @@ def compute_risk_score(events):
     weights = _risk_cfg["weights"]
     score = min(sum(weights.get(t, 0.1) for t in unique_types), 1.0)
 
-    if score >= _risk_cfg["high_threshold"]:
+    # Require at least 2 corroborating event types before escalating beyond low
+    if len(unique_types) < 2:
+        level = "low"
+    elif score >= _risk_cfg["high_threshold"]:
         level = "high"
     elif score >= _risk_cfg["medium_threshold"]:
         level = "medium"

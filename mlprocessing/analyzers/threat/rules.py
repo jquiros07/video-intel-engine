@@ -109,7 +109,9 @@ def evaluate(detections, motion_score, timestamp, last_fired, poses=None, trajec
             "confidence": _violence["confidence"]
         }, timestamp, last_fired, events)
 
-    if poses and any(p["is_aggressive"] for p in poses) and _can_fire("aggressive_pose", timestamp, last_fired):
+    if (poses and any(p["is_aggressive"] for p in poses)
+            and motion_score >= _pose_cfg["min_motion_score"]
+            and _can_fire("aggressive_pose", timestamp, last_fired)):
         _fire("aggressive_pose", {
             "event": "aggressive_pose",
             "timestamp": timestamp,

@@ -42,7 +42,8 @@ def _is_aggressive(keypoints):
     l_hip = _kp(keypoints, _L_HIP)
     r_hip = _kp(keypoints, _R_HIP)
 
-    # Raised arm: wrist y < shoulder y (smaller y = higher in frame)
+    # Raised arm: either wrist meaningfully above its shoulder.
+    # Motion gating in rules.py filters out casual gestures (waving, adjusting hair).
     if l_wrist and l_shoulder and l_wrist[1] < l_shoulder[1]:
         return True
     if r_wrist and r_shoulder and r_wrist[1] < r_shoulder[1]:
